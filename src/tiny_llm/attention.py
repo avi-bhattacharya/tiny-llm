@@ -9,7 +9,14 @@ def scaled_dot_product_attention_simple(
     scale: float | None = None,
     mask: mx.array | None = None,
 ) -> mx.array:
-    pass
+    if not scale:
+        scale = 1 / mx.sqrt(query.shape[-1])
+    score = (query @ mx.swapaxes(key,-2,-1)) * scale
+    if mask is not None:
+        score += mask
+    score = softmax(score, -1)
+    score = score @ value
+    return score
 
 
 class SimpleMultiHeadAttention:
@@ -27,7 +34,7 @@ class SimpleMultiHeadAttention:
         # H
         self.num_heads = num_heads
         # D
-        self.d_k = hidden_size / num_heads
+        self.d_k = hidden_size // num_heads
         self.wq = wq
         self.wk = wk
         self.wv = wv
@@ -43,17 +50,17 @@ class SimpleMultiHeadAttention:
         n = query.shape[0]
         l = query.shape[1]
         # project from N L E -> N L H D
-        q = mx.reshape(query @ self.w_q, [n, l, self.num_heads, self.d_k])
-        k = mx.reshape(key @ self.w_k, [n, l, self.num_heads, self.d_k])
-        v = mx.reshape(value @ self.w_v, [n, l, self.num_heads, self.d_k])
+        q = mx.reshape(linear(query, self.wq), [n, l, self.num_heads, self.d_k])
+        k = mx.reshape(linear(key, self.wk), [n, l, self.num_heads, self.d_k])
+        v = mx.reshape(linear(value, self.wv), [n, l, self.num_heads, self.d_k])
         # Transpose to N H L D
-        mx.swapaxes(q, 1, 2)
-        mx.swapaxes(k, 1, 2)
-        mx.swapaxes(v, 1, 2)
+        q = mx.swapaxes(q, 1, 2)
+        k = mx.swapaxes(k, 1, 2)
+        v = mx.swapaxes(v, 1, 2)
         mat = scaled_dot_product_attention_simple(q,k,v,None,mask)
-        mx.swapaxes(mat, 1, 2)
+        mat = mx.swapaxes(mat, 1, 2)
         mat = mx.reshape(mat, [n, l, self.model_dim])
-        return mat @ self.wo
+        return linear(mat, self.wo)
 
 
 def causal_mask(L: int, S: int, dtype: mx.Dtype) -> mx.array:
