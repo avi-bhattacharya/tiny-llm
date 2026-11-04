@@ -22,7 +22,12 @@ from .utils import assert_allclose, tiny_qwen3_mlx_model
 
 
 def _fixed_fixture(seed: int):
-    return tiny_qwen3_mlx_model(seed=seed)
+    random_state = mx.random.state[:]
+    try:
+        mx.random.seed(seed)
+        return tiny_qwen3_mlx_model()
+    finally:
+        mx.random.state[:] = random_state
 
 
 def test_task_1_quantized_embedding_dequantizes_selected_rows():

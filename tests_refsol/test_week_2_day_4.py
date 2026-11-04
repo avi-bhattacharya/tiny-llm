@@ -63,7 +63,12 @@ def test_task_3_swiglu_matches_readable_operator():
 
 @pytest.mark.parametrize("seed", (0, 4))
 def test_task_4_primitive_checkpoints_compose_public_model(seed):
-    fixture = tiny_qwen3_mlx_model(seed=seed)
+    random_state = mx.random.state[:]
+    try:
+        mx.random.seed(seed)
+        fixture = tiny_qwen3_mlx_model()
+    finally:
+        mx.random.state[:] = random_state
 
     tokens = mx.array([list(range(1, 11))], dtype=mx.int32)
     outputs = []
