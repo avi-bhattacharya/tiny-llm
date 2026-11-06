@@ -58,8 +58,11 @@ class SimpleMultiHeadAttention:
         k = mx.swapaxes(k, 1, 2)
         v = mx.swapaxes(v, 1, 2)
         mat = scaled_dot_product_attention_simple(q,k,v,None,mask)
+        # back to N L H D
         mat = mx.swapaxes(mat, 1, 2)
+        # N L E
         mat = mx.reshape(mat, [n, l, self.model_dim])
+        # returns N L E
         return linear(mat, self.wo)
 
 
